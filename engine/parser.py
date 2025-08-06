@@ -1,4 +1,4 @@
-import PyPDF2
+import pdfplumber
 from docx import Document
 import re
 import logging
@@ -6,15 +6,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 def extract_text_from_pdf(file):
-    """Extracts text from a PDF file using PyPDF2."""
+    """Extracts text from a PDF file using pdfplumber."""
     try:
-        pdf_reader = PyPDF2.PdfReader(file)
         text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
         return text
     except Exception as e:
-        logger.error(f"Failed to read PDF: {e}")
+        logger.error(f"Failed to read PDF with pdfplumber: {e}")
         return ""
 
 def extract_text_from_docx(file):

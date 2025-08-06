@@ -30,7 +30,7 @@ st.markdown("""
     <hr>
 """, unsafe_allow_html=True)
 
-# Sidebar: OpenAI API Key and Reset Button
+# Sidebar: Reset Button
 with st.sidebar:
     st.header("Settings")
 
