@@ -198,6 +198,7 @@ if st.button("🚀 Recommend Candidates"):
             df = pd.DataFrame(results).sort_values("Similarity Score", ascending=False).reset_index(drop=True)
             df["Rank"] = df.index + 1
             st.session_state.results = df
+            st.session_state.csv_data = df.to_csv(index=False)
             st.success("✅ Recommendations generated!")
 
 # Show results if available
@@ -230,5 +231,11 @@ if 'results' in st.session_state:
     st.plotly_chart(fig_bar, use_container_width=True)
 
     # Download CSV
-    csv = df.to_csv(index=False)
-    st.download_button("📥 Download Results as CSV", csv, file_name=f"recommendations_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv")
+    if 'csv_data' in st.session_state:
+        st.download_button(
+            "📥 Download Results as CSV",
+            st.session_state.csv_data,
+            file_name=f"recommendations_{datetime.now().strftime('%Y%m%d')}.csv",mime="text/csv")
+    else:
+        st.info("No data available for download. Please run a recommendation first.")
+
