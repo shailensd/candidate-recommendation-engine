@@ -1,65 +1,53 @@
-# candidate_recommender/engine/summarizer.py
-
-import openai
 import os
 import logging
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
+# Load API key
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+
+# Create Gemini client
+client = genai.Client(api_key=api_key)
+
 def generate_summary(job_description, resume_text, similarity_score):
     """
-    Generate an AI-based summary explaining why a candidate is a good fit.
-    Falls back to static template if OpenAI API key is not set.
-
-    Parameters:
-        job_description (str): The job description
-        resume_text (str): The candidate's resume text
-        similarity_score (float): The similarity score between job and resume
-
-    Returns:
-        str: A brief summary
+    Generate a candidate-job fit summary using Gemini 2.5 Flash API.
     """
+    prompt = f"""
+You are a recruiter assistant helping evaluate candidates.
+
+Job Description:
+{job_description[:1500]}
+
+Candidate Resume:
+{resume_text[:1500]}
+
+Similarity Score: {similarity_score:.3f}
+
+Write a 2–3 sentence summary explaining why this candidate may be a good fit. Focus on:
+- Skills and experience alignment
+- Relevant qualifications
+- Overall suitability
+"""
+
     try:
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if not openai_api_key:
-            return fallback_summary(similarity_score)
-
-        openai.api_key = openai_api_key
-
-        prompt = f"""
-        Job Description: {job_description[:1000]}
-
-        Candidate Resume: {resume_text[:1000]}
-
-        Similarity Score: {similarity_score:.3f}
-
-        Based on the job description and resume above, provide a professional 2–3 sentence summary explaining why this candidate is a good fit. Focus on:
-        - Skills and experience alignment
-        - Relevant qualifications
-        - Overall suitability
-        """
-
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert technical recruiter evaluating candidates."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=150,
-            temperature=0.7
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0)  # disables "thinking"
+            )
         )
-
-        return response.choices[0].message.content.strip()
-
+        return response.text.strip()
     except Exception as e:
-        logger.error(f"OpenAI summary generation failed: {e}")
+        logger.error(f"Gemini summary failed: {e}")
         return fallback_summary(similarity_score)
 
 def fallback_summary(similarity_score):
-    """
-    Fallback summary if OpenAI API is not available.
-    Uses similarity score to generate a basic template-based summary.
-    """
     if similarity_score > 0.8:
         return f"This candidate demonstrates excellent alignment with the job requirements. The high similarity score of {similarity_score:.3f} suggests a strong potential fit."
     elif similarity_score > 0.6:
