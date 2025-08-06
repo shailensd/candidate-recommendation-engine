@@ -24,6 +24,27 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- Authentication Section ---
+def login():
+    with st.sidebar:
+        st.subheader("🔐 Login")
+
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+
+        if st.button("Login"):
+            # Replace this with a proper auth method or user DB
+            if username and password == "sprouts123":  # basic check
+                st.session_state.user = username
+                st.success(f"Welcome, {username}!")
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
+
+if "user" not in st.session_state:
+    login()
+    st.stop()
+
 # Header
 st.markdown("""
     <h1 style='text-align: center; font-size: 2.5rem;'>🧠 Candidate Recommendation Engine</h1>
