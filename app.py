@@ -25,21 +25,40 @@ st.set_page_config(
 )
 
 # --- Authentication Section ---
+
 def login():
-    with st.sidebar:
-        st.subheader("🔐 Login")
+    st.markdown("""
+        <div style="text-align: center; margin-top: 2rem;">
+            <h3>🔐 Login</h3>
+        </div>
+        <style>
+            .stTextInput > div > div > input {
+                padding: 0.4rem;
+                font-size: 0.9rem;
+            }
+            .stButton button {
+                padding: 0.3rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
+    col1, col2, col3 = st.columns([1.5, 2, 1.5])
+    with col2:
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username", key="username_input")
+            password = st.text_input("Password", type="password", key="password_input")
+            submitted = st.form_submit_button("Login")  # Enter now works here
 
-        if st.button("Login"):
-            # Replace this with a proper auth method or user DB
-            if username and password == "sprouts123":  # basic check
-                st.session_state.user = username
-                st.success(f"Welcome, {username}!")
-                st.rerun()
-            else:
-                st.error("Invalid username or password")
+            if submitted:
+                if username and password == "sprouts123":  # Replace with real logic
+                    st.session_state.user = username
+                    st.success(f"Welcome, {username}!")
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password")
+
+
 
 if "user" not in st.session_state:
     login()
@@ -53,15 +72,23 @@ st.markdown("""
 
 # Sidebar: Reset Button
 with st.sidebar:
+    # Show logged-in user info at the top
+    if "user" in st.session_state:
+        st.markdown(f"👤 **{st.session_state.user}**")
+        if st.button("🚪 Logout"):
+            del st.session_state.user
+            st.rerun()
+
     st.header("Settings")
 
     if st.button("🔄 Start New Search"):
         st.session_state["upload_key"] = f"upload_{datetime.now().timestamp()}"
         st.session_state["jd_key"] = f"jd_{datetime.now().timestamp()}"
         for key in list(st.session_state.keys()):
-            if key != "upload_key" and key != "jd_key":
+            if key not in ["upload_key", "jd_key", "user"]:  # Preserve login
                 del st.session_state[key]
         st.rerun()
+
 
 # Load embedding model
 if 'embedding_model' not in st.session_state:
