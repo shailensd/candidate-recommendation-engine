@@ -17,6 +17,25 @@ from engine.summarizer import generate_summary
 
 logger = logging.getLogger(__name__)
 
+def classify_status(score):
+    """
+    Classify candidate status based on similarity score.
+    
+    Parameters:
+        score (float): Similarity score between 0 and 1
+        
+    Returns:
+        tuple: (status_text, status_class)
+    """
+    if score >= 0.8:
+        return "Excellent Match", "status-excellent"
+    elif score >= 0.6:
+        return "Good Match", "status-good"
+    elif score >= 0.4:
+        return "Fair Match", "status-fair"
+    else:
+        return "Poor Match", "status-poor"
+
 def process_candidates(model, job_description, uploaded_files, manual_texts):
     """
     Process job description and candidate resumes to generate ranked recommendations.
@@ -28,7 +47,7 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
         manual_texts (List[str]): Manually entered resume texts
 
     Returns:
-        pd.DataFrame: DataFrame containing ranked candidate matches
+        pd.DataFrame: DataFrame containing ranked candidate matches with status information
     """
     candidates = []
 
@@ -84,6 +103,7 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
     results = []
     for i, candidate in enumerate(candidates):
         score = similarity_scores[i]
+        status, status_class = classify_status(score)
         summary = generate_summary(job_description, candidate["text"], score)
         results.append({
             "Rank": i + 1,
@@ -92,6 +112,8 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
             "Email": candidate["email"],
             "Phone": candidate["phone"],
             "Similarity Score": round(score, 4),
+            "Status": status,
+            "Status Class": status_class,
             "AI Summary": summary,
             "Source": candidate["source"]
         })

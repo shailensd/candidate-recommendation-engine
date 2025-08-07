@@ -1,16 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import os
 import logging
 from datetime import datetime
 
 # Import modular components
 from ml_utils.embedding_model import load_embedding_model
-from engine.parser import extract_text_from_pdf, extract_text_from_docx, clean_text, extract_candidate_info
-from engine.similarity import generate_embeddings, calculate_similarity
-from engine.summarizer import generate_summary
+from engine.recommender import process_candidates
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -121,82 +117,19 @@ if st.button("🚀 Recommend Candidates"):
         st.error("Please provide at least one candidate resume.")
     else:
         with st.spinner("Analyzing candidates..."):
-            candidates = []
-
-            # Uploaded files
-            for i, file in enumerate(uploaded_files):
-                ext = file.name.split('.')[-1].lower()
-                if ext == 'pdf':
-                    text = extract_text_from_pdf(file)
-                elif ext == 'docx':
-                    text = extract_text_from_docx(file)
-                else:
-                    st.warning(f"Unsupported format: {file.name}")
-                    continue
-
-                if text:
-                    info = extract_candidate_info(text)
-                    candidates.append({
-                        "id": f"File_{i+1}",
-                        "name": info["name"],
-                        "email": info["email"],
-                        "phone": info["phone"],
-                        "text": clean_text(text),
-                        "source": "file"
-                    })
-
-            # Manual entries
-            for i, text in enumerate(manual_texts):
-                if text.strip():
-                    info = extract_candidate_info(text)
-                    candidates.append({
-                        "id": f"Text_{i+1}",
-                        "name": info["name"],
-                        "email": info["email"],
-                        "phone": info["phone"],
-                        "text": clean_text(text),
-                        "source": "manual"
-                    })
-
-            if not candidates:
+            # Use the centralized recommender function
+            df = process_candidates(
+                model=st.session_state.embedding_model,
+                job_description=job_description,
+                uploaded_files=uploaded_files,
+                manual_texts=manual_texts
+            )
+            
+            if df.empty:
                 st.error("No valid resumes found.")
                 st.stop()
-
-            # Generate embeddings and similarity
-            job_emb = generate_embeddings(st.session_state.embedding_model, [job_description])[0]
-            texts = [c['text'] for c in candidates]
-            cand_embs = generate_embeddings(st.session_state.embedding_model, texts)
-            sims = calculate_similarity(job_emb, cand_embs)
-
-            # Build results
-            results = []
-            for i, c in enumerate(candidates):
-                score = round(sims[i], 4)
-                if score >= 0.8:
-                    status, badge = "Excellent Match", "status-excellent"
-                elif score >= 0.6:
-                    status, badge = "Good Match", "status-good"
-                elif score >= 0.4:
-                    status, badge = "Fair Match", "status-fair"
-                else:
-                    status, badge = "Poor Match", "status-poor"
-
-                summary = generate_summary(job_description, c['text'], score)
-                results.append({
-                    "Rank": i+1,
-                    "Candidate ID": c['id'],
-                    "Name": c['name'],
-                    "Email": c['email'],
-                    "Phone": c['phone'],
-                    "Similarity Score": score,
-                    "Status": status,
-                    "Status Class": badge,
-                    "AI Summary": summary,
-                    "Source": c['source']
-                })
-
-            df = pd.DataFrame(results).sort_values("Similarity Score", ascending=False).reset_index(drop=True)
-            df["Rank"] = df.index + 1
+            
+            # Store results and CSV data
             st.session_state.results = df
             st.session_state.csv_data = df.to_csv(index=False)
             st.success("✅ Recommendations generated!")
