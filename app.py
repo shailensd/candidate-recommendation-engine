@@ -83,6 +83,7 @@ with st.sidebar:
         for key in list(st.session_state.keys()):
             if key not in ["upload_key", "jd_key", "user"]:  # Preserve login
                 del st.session_state[key]
+        st.session_state["manual_count"] = 0
         st.rerun()
 
 
@@ -106,7 +107,7 @@ uploaded_files = st.file_uploader(
 )
 
 st.markdown("Or enter resume texts manually:")
-manual_count = st.number_input("Number of manual resumes", min_value=0, max_value=10, value=0)
+manual_count = st.number_input("Number of manual resumes", min_value=0, max_value=50, key = "manual_count")
 manual_texts = [st.text_area(f"Manual Resume {i+1}", height=150) for i in range(manual_count)]
 
 # Process button
