@@ -51,7 +51,7 @@ This application helps recruiters and hiring managers quickly identify the best 
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shailensd/candidate-recommendation-engine.git
    cd candidate_recommendation_engine
    ```
 
