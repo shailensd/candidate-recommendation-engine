@@ -150,7 +150,7 @@ candidate_recommendation_engine/
 ### Performance
 - **Processing Speed**: ~2-5 seconds per resume
 - **Accuracy**: 95%+ for structured resumes
-- **Scalability**: Handles 50+ candidates efficiently
+- **Scalability**: Handles candidates efficiently and scalable
 - **Memory Usage**: Lightweight (~50MB)
 
 ## 🧪 Testing
@@ -189,27 +189,6 @@ The application provides:
 - **API Security**: Secure API key management
 - **Session Management**: Automatic session cleanup
 
-## 🚀 Deployment
-
-### Streamlit Cloud (Recommended)
-1. **Push to GitHub**: `git push origin main`
-2. **Go to [share.streamlit.io](https://share.streamlit.io)**
-3. **Connect GitHub account** and deploy
-4. **Add environment variable**: `GEMINI_API_KEY = "your_api_key"`
-5. **Access your app**: `https://your-app-name.streamlit.app`
-
-### Local Deployment
-```bash
-streamlit run app.py
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
 
 ## 📝 License
 
@@ -225,6 +204,9 @@ For issues and questions:
 
 ## 🎯 Future Enhancements
 
+- [ ] Add appointment scheduler
+- [ ] Improve UI with other libraries/frameworks
+- [ ] Provide advanced analytics
 - [ ] Multi-language support
 - [ ] Advanced filtering options
 - [ ] Integration with ATS systems
@@ -232,6 +214,4 @@ For issues and questions:
 - [ ] Custom embedding models
 - [ ] Real-time collaboration features
 
----
 
-**Built with ❤️ using Streamlit and AI**
