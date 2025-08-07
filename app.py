@@ -75,7 +75,7 @@ with st.sidebar:
             del st.session_state.user
             st.rerun()
 
-    st.header("Settings")
+    # st.header("Settings")
 
     if st.button("🔄 Start New Search"):
         st.session_state["upload_key"] = f"upload_{datetime.now().timestamp()}"
@@ -118,13 +118,26 @@ if st.button("🚀 Recommend Candidates"):
         st.error("Please provide at least one candidate resume.")
     else:
         with st.spinner("Analyzing candidates..."):
-            # Use the centralized recommender function
-            df = process_candidates(
-                model=st.session_state.embedding_model,
-                job_description=job_description,
-                uploaded_files=uploaded_files,
-                manual_texts=manual_texts
-            )
+            try:
+                # Use the centralized recommender function
+                result = process_candidates(
+                    model=st.session_state.embedding_model,
+                    job_description=job_description,
+                    uploaded_files=uploaded_files,
+                    manual_texts=manual_texts
+                )
+                
+                # Handle both old and new return formats
+                if isinstance(result, tuple) and len(result) == 2:
+                    df, duplicate_info = result
+                else:
+                    # Fallback for old format
+                    df = result
+                    duplicate_info = []
+                    
+            except Exception as e:
+                st.error(f"Error processing candidates: {str(e)}")
+                st.stop()
             
             if df.empty:
                 st.error("No valid resumes found.")
@@ -132,8 +145,15 @@ if st.button("🚀 Recommend Candidates"):
             
             # Store results and CSV data
             st.session_state.results = df
+            st.session_state.duplicate_info = duplicate_info
             st.session_state.csv_data = df.to_csv(index=False)
             st.success("✅ Recommendations generated!")
+            
+            # Show duplicate information if any
+            if duplicate_info:
+                st.warning(f"⚠️ Found {len(duplicate_info)} duplicate candidate(s) that were automatically removed:")
+                for dup in duplicate_info:
+                    st.info(f"• **{dup['name']}** ({dup['email']}) - {dup['reason']}")
 
 # Show results if available
 if 'results' in st.session_state:
