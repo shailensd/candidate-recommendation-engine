@@ -5,14 +5,8 @@ logger = logging.getLogger(__name__)
 
 def generate_embeddings(model, texts):
     """
-    Generates sentence embeddings for a list of texts.
-
-    Parameters:
-        model: Pre-loaded SentenceTransformer model
-        texts (List[str]): List of input texts
-
-    Returns:
-        List of embeddings (vectors)
+    Converts text to dense vectors using SentenceTransformer.
+    Raises exception if embedding generation fails.
     """
     try:
         return model.encode(texts, convert_to_tensor=False)
@@ -22,14 +16,9 @@ def generate_embeddings(model, texts):
 
 def calculate_similarity(job_embedding, candidate_embeddings):
     """
-    Calculates cosine similarity between job embedding and each candidate embedding.
-
-    Parameters:
-        job_embedding (np.ndarray): Embedding vector for the job description
-        candidate_embeddings (List[np.ndarray]): List of embedding vectors for candidates
-
-    Returns:
-        List of cosine similarity scores
+    Computes cosine similarity between job and each candidate.
+    Score range: 0 (different) to 1 (identical).
+    Raises exception if calculation fails.
     """
     try:
         return cosine_similarity([job_embedding], candidate_embeddings)[0]

@@ -5,16 +5,9 @@ logger = logging.getLogger(__name__)
 
 def load_embedding_model(model_name='all-MiniLM-L6-v2'):
     """
-    Load and return the Sentence Transformer model.
-
-    Parameters:
-        model_name (str): Name of the pre-trained model to load.
-
-    Returns:
-        SentenceTransformer: Loaded model object.
-
-    Raises:
-        RuntimeError: If the model fails to load.
+    Loads the SentenceTransformer model for text embeddings.
+    Default: all-MiniLM-L6-v2 (good balance of speed/accuracy)
+    Raises RuntimeError if loading fails.
     """
     try:
         model = SentenceTransformer(model_name)

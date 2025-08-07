@@ -21,13 +21,12 @@ logger = logging.getLogger(__name__)
 
 def classify_status(score):
     """
-    Classify candidate status based on similarity score.
-    
-    Parameters:
-        score (float): Similarity score between 0 and 1
-        
-    Returns:
-        tuple: (status_text, status_class)
+    Maps similarity score to human-readable status:
+    ≥0.8: Excellent Match
+    ≥0.6: Good Match
+    ≥0.4: Fair Match
+    <0.4: Poor Match
+    Returns (status_text, CSS_class)
     """
     if score >= 0.8:
         return "Excellent Match", "status-excellent"
@@ -40,13 +39,8 @@ def classify_status(score):
 
 def generate_content_hash(text):
     """
-    Generate a hash of the cleaned text content for duplicate detection.
-    
-    Parameters:
-        text (str): The text content to hash
-        
-    Returns:
-        str: SHA-256 hash of the cleaned text
+    Creates SHA-256 hash of cleaned text for duplicate detection.
+    Handles None/empty text gracefully.
     """
     try:
         if not text:
@@ -60,18 +54,17 @@ def generate_content_hash(text):
 
 def detect_duplicates(candidates):
     """
-    Detect and handle duplicate candidates based on email, content hash, and name.
+    Identifies duplicate candidates using three strategies:
+    1. Identical email addresses
+    2. Identical content (after cleaning)
+    3. Same name + email combination
     
-    Parameters:
-        candidates (list): List of candidate dictionaries
-        
-    Returns:
-        tuple: (unique_candidates, duplicate_info)
+    Returns (unique_candidates, info_about_removed_duplicates)
     """
     if not candidates:
         return [], []
     
-    # Validate candidate structure and filter out invalid candidates
+    # Filter out invalid candidates (missing required fields)
     valid_candidates = []
     for i, candidate in enumerate(candidates):
         if not isinstance(candidate, dict):
@@ -85,12 +78,11 @@ def detect_duplicates(candidates):
     if not valid_candidates:
         return [], []
     
-    # Track duplicates by different criteria
+    # Group candidates by duplicate detection criteria
     email_groups = defaultdict(list)
     content_hash_groups = defaultdict(list)
     name_email_groups = defaultdict(list)
     
-    # Group candidates by different duplicate criteria
     for i, candidate in enumerate(valid_candidates):
         email = candidate["email"].lower().strip() if candidate["email"] else ""
         content_hash = generate_content_hash(candidate["text"])
@@ -104,28 +96,26 @@ def detect_duplicates(candidates):
     duplicates = set()
     duplicate_info = []
     
-    # Check for duplicate emails (most reliable)
+    # Detect duplicates by email (most reliable indicator)
     for email, indices in email_groups.items():
         if len(indices) > 1 and email not in ["no email found", ""]:
             logger.info(f"Found {len(indices)} candidates with duplicate email: {email}")
-            # Keep the first one, mark others as duplicates
             for idx in indices[1:]:
                 duplicates.add(idx)
                 duplicate_info.append({
                     "type": "email_duplicate",
                     "candidate_id": valid_candidates[idx]["id"],
                     "name": valid_candidates[idx]["name"],
-                    "email": valid_candidates[idx]["email"],  # Use original email case
+                    "email": valid_candidates[idx]["email"],
                     "reason": f"Duplicate email with candidate {valid_candidates[indices[0]]['id']}"
                 })
     
-    # Check for duplicate content (exact same resume)
+    # Detect duplicates by content hash (identical resumes)
     for content_hash, indices in content_hash_groups.items():
         if len(indices) > 1:
             logger.info(f"Found {len(indices)} candidates with duplicate content")
-            # Keep the first one, mark others as duplicates
             for idx in indices[1:]:
-                if idx not in duplicates:  # Only if not already marked as email duplicate
+                if idx not in duplicates:
                     duplicates.add(idx)
                     duplicate_info.append({
                         "type": "content_duplicate",
@@ -135,13 +125,12 @@ def detect_duplicates(candidates):
                         "reason": f"Duplicate content with candidate {valid_candidates[indices[0]]['id']}"
                     })
     
-    # Check for duplicate name+email combinations (manual entries)
+    # Detect duplicates by name+email combination (manual entries)
     for name_email, indices in name_email_groups.items():
         if len(indices) > 1:
             logger.info(f"Found {len(indices)} candidates with duplicate name+email: {name_email}")
-            # Keep the first one, mark others as duplicates
             for idx in indices[1:]:
-                if idx not in duplicates:  # Only if not already marked
+                if idx not in duplicates:
                     duplicates.add(idx)
                     duplicate_info.append({
                         "type": "name_email_duplicate",
@@ -151,7 +140,7 @@ def detect_duplicates(candidates):
                         "reason": f"Duplicate name+email with candidate {valid_candidates[indices[0]]['id']}"
                     })
     
-    # Filter out duplicates
+    # Return unique candidates and duplicate information
     unique_candidates = [candidate for i, candidate in enumerate(valid_candidates) if i not in duplicates]
     
     if duplicates:
@@ -161,20 +150,19 @@ def detect_duplicates(candidates):
 
 def process_candidates(model, job_description, uploaded_files, manual_texts):
     """
-    Process job description and candidate resumes to generate ranked recommendations.
-
-    Parameters:
-        model: Pre-loaded SentenceTransformer model
-        job_description (str): The job description text
-        uploaded_files (List[UploadedFile]): List of PDF/DOCX resume files
-        manual_texts (List[str]): Manually entered resume texts
-
-    Returns:
-        tuple: (pd.DataFrame, list) - DataFrame containing ranked candidate matches and list of duplicate information
+    Main pipeline for candidate recommendation:
+    1. Extract text from resumes (PDF/DOCX/manual input)
+    2. Remove duplicates
+    3. Generate embeddings using provided model
+    4. Calculate similarity scores
+    5. Sort and rank candidates
+    6. Generate AI summaries for top matches
+    
+    Returns (DataFrame_with_ranked_candidates, duplicate_info)
     """
     candidates = []
 
-    # 1. Process uploaded resume files
+    # Extract text from uploaded files (PDF/DOCX)
     for i, file in enumerate(uploaded_files):
         if file:
             ext = file.name.split(".")[-1].lower()
@@ -197,7 +185,7 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
                     "source": "file"
                 })
 
-    # 2. Process manually entered resume texts
+    # Process manually entered resume texts
     for i, text in enumerate(manual_texts):
         if text.strip():
             info = extract_candidate_info(text)
@@ -214,7 +202,7 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
         logger.warning("No valid candidate data provided.")
         return pd.DataFrame(), []
 
-    # 3. Detect and remove duplicates
+    # Remove duplicates and log findings
     unique_candidates, duplicate_info = detect_duplicates(candidates)
     
     if duplicate_info:
@@ -226,15 +214,15 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
         logger.warning("No unique candidates remaining after duplicate removal.")
         return pd.DataFrame(), duplicate_info
 
-    # 4. Generate embeddings
+    # Generate embeddings for job and resumes
     job_embedding = generate_embeddings(model, [job_description])[0]
     resume_texts = [c["text"] for c in unique_candidates]
     resume_embeddings = generate_embeddings(model, resume_texts)
 
-    # 5. Compute similarity scores
+    # Calculate similarity scores
     similarity_scores = calculate_similarity(job_embedding, resume_embeddings)
 
-    # 6. Build result rows with scores and sort by similarity score
+    # Build results with scores and status
     results = []
     for i, candidate in enumerate(unique_candidates):
         score = similarity_scores[i]
@@ -248,31 +236,30 @@ def process_candidates(model, job_description, uploaded_files, manual_texts):
             "Similarity Score": round(score, 4),
             "Status": status,
             "Status Class": status_class,
-            "AI Summary": "",  # Placeholder - will be filled for top 5
+            "AI Summary": "",  # Will be filled for top 5
             "Source": candidate["source"],
-            "text": candidate["text"]  # Keep text for summary generation
+            "text": candidate["text"]  # Keep for summary generation
         })
 
-    # 7. Sort by similarity score
+    # Sort by similarity score (descending)
     try:
         df = pd.DataFrame(results).sort_values("Similarity Score", ascending=False).reset_index(drop=True)
         df["Rank"] = df.index + 1
     except Exception as e:
         logger.error(f"Error sorting DataFrame: {e}")
-        # Create a simple DataFrame if sorting fails
         df = pd.DataFrame(results)
         df["Rank"] = range(1, len(df) + 1)
 
-    # 8. Generate summaries only for top 5 candidates
+    # Generate AI summaries for top 5 candidates
     top_candidates_count = min(5, len(df))
     for i in range(top_candidates_count):
-        if i < len(df):  # Ensure we don't exceed DataFrame bounds
+        if i < len(df):
             candidate_text = df.iloc[i]["text"]
             score = df.iloc[i]["Similarity Score"]
             summary = generate_summary(job_description, candidate_text, score)
             df.at[i, "AI Summary"] = summary
 
-    # 9. Remove the temporary text column and return
+    # Clean up and return results
     df = df.drop(columns=["text"])
     
     return df, duplicate_info

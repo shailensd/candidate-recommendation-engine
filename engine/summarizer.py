@@ -15,7 +15,9 @@ client = genai.Client(api_key=api_key)
 
 def generate_summary(job_description, resume_text, similarity_score):
     """
-    Generate a candidate-job fit summary using Gemini 2.5 Flash API.
+    Uses Gemini 2.5 Flash API to explain candidate fit.
+    Limits input text to 1500 chars to avoid token limits.
+    Falls back to template-based summary if API fails.
     """
     prompt = f"""
 You are a recruiter assistant helping evaluate candidates.
@@ -39,7 +41,7 @@ Write a 2–3 sentence summary explaining why this candidate may be a good fit. 
             model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=0)  # disables "thinking"
+                thinking_config=types.ThinkingConfig(thinking_budget=0)  # Disable thinking for faster response
             )
         )
         return response.text.strip()
@@ -48,6 +50,11 @@ Write a 2–3 sentence summary explaining why this candidate may be a good fit. 
         return fallback_summary(similarity_score)
 
 def fallback_summary(similarity_score):
+    """
+    Generates template-based summary when API fails.
+    Thresholds match status classification:
+    >0.8: Excellent | >0.6: Good | >0.4: Moderate | <0.4: Limited
+    """
     if similarity_score > 0.8:
         return f"This candidate demonstrates excellent alignment with the job requirements. The high similarity score of {similarity_score:.3f} suggests a strong potential fit."
     elif similarity_score > 0.6:
