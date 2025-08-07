@@ -105,15 +105,32 @@ def extract_candidate_info(text):
     email_match = re.search(email_pattern, text)
     email = email_match.group() if email_match else "No email found"
 
-    # Extract phone using multiple format patterns (US and international)
+    # Extract phone using comprehensive format patterns
     phone_patterns = [
-        r'\(\d{3}\)\s*\d{3}\s*[-.]?\s*\d{4}',  # (408) 627-2229
-        r'(\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',  # Standard US/international
-        r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',  # 408-627-2229
-        r'\d{10}',  # 4086272229
-        r'\+?\d{1,3}[-.\s]?\d{1,2}[-.\s]?\d{1,2}[-.\s]?\d{1,2}[-.\s]?\d{1,2}',  # European format
-        r'\+?\d{1,3}[-.\s]?\d{5}[-.\s]?\d{5}',  # Indian format
-        r'\+?\d{1,3}[-.\s]?\d{1}[-.\s]?\d{8}',  # Dutch format
+        # North American formats
+        r'\(\d{3}\)\s*\d{3}[-.\s]?\d{4}(?:\s*(?:x|ext\.?|extension)\s*\d+)?',  # (408) 627-2229, with optional extension
+        r'\+?1[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',  # +1 (408) 627-2229
+        r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',  # 408-627-2229 or 408.627.2229
+        
+        # International formats
+        r'\+44\s?\d{2,5}\s?\d{6}',  # UK: +44 7911 123456
+        r'\+61\s?\d\s?\d{4}\s?\d{4}',  # Australia: +61 4 1234 5678
+        r'\+86\s?\d{2,3}\s?\d{4}\s?\d{4}',  # China: +86 123 4567 8901
+        
+        # European formats
+        r'\+\d{2}[-.\s]?\d{1,2}[-.\s]?\d{2,3}[-.\s]?\d{2}[-.\s]?\d{2}',  # +33 1 23 45 67 89
+        r'\+\d{2}[-.\s]?\d{9,10}',  # +49 1234567890
+        
+        # Asian formats
+        r'\+\d{2}[-.\s]?\d{3,5}[-.\s]?\d{4}',  # Japanese/Korean
+        r'\+\d{2}[-.\s]?\d{5}[-.\s]?\d{5}',  # Indian: +91 98765 43210
+        
+        # Generic formats
+        r'\+?\d{1}[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',  # Generic international
+        r'\d{10}',  # Plain 10 digits
+        
+        # With extensions
+        r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?:\s*(?:x|ext\.?|extension)\s*\d+)?'  # Any format with extension
     ]
     
     phone = "No phone found"
