@@ -79,7 +79,7 @@ This application helps recruiters and hiring managers quickly identify the best 
 
 ### Usage
 
-1. **Login** with any username and password: `sprouts123`
+1. **Login** username: `sprouts123` and password: `sprouts123`
 2. **Enter Job Description** in the text area
 3. **Upload Resumes** (PDF/DOCX) or enter manually
 4. **Click "Recommend Candidates"** to analyze
